@@ -53,13 +53,12 @@ async function fetchOmbreBreath() {
       console.log("OB breath-hook 请求失败:", resp.status);
       return null;
     }
-    const data = await resp.json().catch(() => null);
-    const text = data?.memory || data?.breath || data?.content || data?.text || data?.result;
-    if (!text) {
-      console.log("OB breath-hook 返回格式待确认:", JSON.stringify(data).slice(0, 500));
-      return null;
-    }
-    return String(text);
+const text = await resp.text();
+if (!text || !text.trim()) {
+  console.log("OB breath-hook 返回内容为空");
+  return null;
+}
+return text;
   } catch (err) {
     console.log("OB breath-hook 调用异常:", err.message);
     return null;
