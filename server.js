@@ -35,6 +35,36 @@ app.register(require("@fastify/formbody"));
 
 const PORT = Number(process.env.PORT) || 3000;
 const TARGET_API_URL = process.env.TARGET_API_URL;
+const OMBRE_BREATH_URL = process.env.OMBRE_BREATH_URL || "";
+const OMBRE_HOOK_TOKEN = process.env.OMBRE_HOOK_TOKEN || "";
+
+async function fetchOmbreBreath() {
+  if (!OMBRE_BREATH_URL || !OMBRE_HOOK_TOKEN) return null;
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    const resp = await fetch(OMBRE_BREATH_URL, {
+      method: "GET",
+      headers: { "X-Ombre-Hook-Token": OMBRE_HOOK_TOKEN },
+      signal: controller.signal
+    });
+    clearTimeout(timer);
+    if (!resp.ok) {
+      console.log("OB breath-hook 请求失败:", resp.status);
+      return null;
+    }
+    const data = await resp.json().catch(() => null);
+    const text = data?.memory || data?.breath || data?.content || data?.text || data?.result;
+    if (!text) {
+      console.log("OB breath-hook 返回格式待确认:", JSON.stringify(data).slice(0, 500));
+      return null;
+    }
+    return String(text);
+  } catch (err) {
+    console.log("OB breath-hook 调用异常:", err.message);
+    return null;
+  }
+}
 const TIME_ZONE = resolveTimeZone();
 const IS_RAILWAY_RUNTIME = Boolean(
   process.env.RAILWAY_ENVIRONMENT ||
@@ -699,6 +729,16 @@ app.post("/v1/chat/completions", async (req, reply) => {
     const requestedStream = body?.stream === true;
 
     // 请求模型
+    const obMemory = await fetchOmbreBreath();
+if (obMemory) {
+  const memoryBlock = `[長期記憶 - 來自 Ombre Brain]\n${obMemory}`;
+  const sysIndex = llmMessages.findIndex(m => m.role === "system");
+  if (sysIndex >= 0) {
+    llmMessages[sysIndex] = { ...llmMessages[sysIndex], content: `${llmMessages[sysIndex].content}\n\n${memoryBlock}` };
+  } else {
+    llmMessages.unshift({ role: "system", content: memoryBlock });
+  }
+}
     const response = await fetch(TARGET_API_URL, {
       method: "POST",
       headers: {
