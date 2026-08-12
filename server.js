@@ -730,6 +730,7 @@ app.post("/v1/chat/completions", async (req, reply) => {
     // 请求模型
     const obMemory = await fetchOmbreBreath();
 if (obMemory) {
+  console.log("OB breath-hook 成功注入，长度:", obMemory.length);
   const memoryBlock = `[長期記憶 - 來自 Ombre Brain]\n${obMemory}`;
   const sysIndex = llmMessages.findIndex(m => m.role === "system");
   if (sysIndex >= 0) {
