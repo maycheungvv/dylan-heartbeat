@@ -728,7 +728,9 @@ app.post("/v1/chat/completions", async (req, reply) => {
     const requestedStream = body?.stream === true;
 
     // 请求模型
-    const obMemory = await fetchOmbreBreath();
+    const isFirstTurn = !llmMessages.some(m => m.role === "assistant");
+    const obMemory = isFirstTurn ? await fetchOmbreBreath() : null;
+    console.log(isFirstTurn ? "首轮对话，尝试注入 OB 记忆" : "非首轮，跳过 OB 记忆注入");
 if (obMemory) {
   console.log("OB breath-hook 成功注入，长度:", obMemory.length);
   const memoryBlock = `[長期記憶 - 來自 Ombre Brain]\n${obMemory}`;
